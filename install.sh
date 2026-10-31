@@ -21,6 +21,7 @@ APP_SUB_PATH="sub"
 APP_JSON_PATH="json"
 PANEL_SUB_PATH="sub"
 PANEL_JSON_PATH="json"
+GITHUB_TOKEN=""
 
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
@@ -650,8 +651,11 @@ function update_version_manager() {
     echo -e "\e[36m             GITHUB VERSION MANAGER              \e[0m"
     echo -e "\e[36m=================================================\e[0m\n"
     
-    echo -e "\n\e[33m[+] Fetching available releases from GitHub...\e[0m"
-    tags=$(curl -s https://api.github.com/repos/${REPO_NAME}/releases | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    if [ -n "$GITHUB_TOKEN" ]; then
+        tags=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${REPO_NAME}/releases | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    else
+        tags=$(curl -s https://api.github.com/repos/${REPO_NAME}/releases | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    fi
     
     if [ -z "$tags" ]; then
         echo -e "\e[31m[✖] No releases found or API rate limit exceeded. Proceeding with Main branch...\e[0m"
@@ -686,7 +690,12 @@ function update_version_manager() {
     
     echo -e "\n\e[33m[+] Downloading script (Tag: ${SELECTED_TAG}) from GitHub...\e[0m"
     TMP_SCRIPT="/tmp/sub_modifier_update.sh"
-    curl -Ls "${DOWNLOAD_URL}?$(date +%s)" -o "$TMP_SCRIPT"
+    
+    if [ -n "$GITHUB_TOKEN" ]; then
+        curl -s -H "Authorization: token $GITHUB_TOKEN" -L "${DOWNLOAD_URL}?$(date +%s)" -o "$TMP_SCRIPT"
+    else
+        curl -Ls "${DOWNLOAD_URL}?$(date +%s)" -o "$TMP_SCRIPT"
+    fi
     
     if [ $? -ne 0 ] || [ ! -s "$TMP_SCRIPT" ]; then
         echo -e "\e[31m[✖] Download failed! Please check your server's connection to GitHub.\e[0m\n"
@@ -757,6 +766,8 @@ function configure_and_install() {
     APP_SUB_PATH=$(echo "$APP_SUB_PATH" | sed 's/^\///;s/\/$//')
     APP_JSON_PATH=$(echo "$APP_JSON_PATH" | sed 's/^\///;s/\/$//')
 
+    read -p "Enter GitHub Token (Leave blank if Public Repo) [$GITHUB_TOKEN]: " input </dev/tty; GITHUB_TOKEN=${input:-$GITHUB_TOKEN}
+
     echo -e "\n\e[36m================ PORT CONFIGURATION ================\e[0m"
     echo -e "\e[32m🌟 Master Port:\e[0m Smart Auto-Router (Highly Recommended, HTTPS)"
     read -p "🔗 Enter port for Smart Router [$MASTER_PORT]: " input </dev/tty; MASTER_PORT=${input:-$MASTER_PORT}
@@ -796,6 +807,7 @@ APP_SUB_PATH="$APP_SUB_PATH"
 APP_JSON_PATH="$APP_JSON_PATH"
 PANEL_SUB_PATH="$PANEL_SUB_PATH"
 PANEL_JSON_PATH="$PANEL_JSON_PATH"
+GITHUB_TOKEN="$GITHUB_TOKEN"
 EOF
 
     ensure_dependencies
