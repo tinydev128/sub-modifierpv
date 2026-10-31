@@ -57,13 +57,13 @@ Finally, the router checks the user's app (`User-Agent`):
 
 ## 🚀 Installation
 
-Run the following command as `root` on your Ubuntu server:
+Since this repository is private, you will need a **GitHub Personal Access Token (PAT)** with `repo` permissions to download the script.
 
+Run the following command on your Ubuntu server (replace `YOUR_GITHUB_TOKEN` with your actual token):
+
+```bash
+sudo bash <(curl -H "Authorization: token YOUR_GITHUB_TOKEN" -Ls (https://raw.githubusercontent.com/tinydev128/sub-modifier/main/install.sh))
 ```
-sudo bash <(curl -Ls https://raw.githubusercontent.com/tinydev128/sub-modifier/main/install.sh)
-
-```
-
 During the initial installation, you will be prompted to configure your base URL, target keywords, and custom security paths.
 
 ## 💻 CLI Usage & Management
