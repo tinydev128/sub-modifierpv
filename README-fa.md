@@ -56,7 +56,7 @@
 دستور زیر را در ترمینال سرور اوبونتوی خود وارد کنید (حتماً به جای `YOUR_GITHUB_TOKEN` توکن اختصاصی خود را قرار دهید):
 
 ```bash
-sudo bash <(curl -H "Authorization: token YOUR_GITHUB_TOKEN" -Ls https://raw.githubusercontent.com/tinydev128/sub-modifier/main/install.sh)
+curl -H "Authorization: token YOUR_GITHUB_TOKEN" -Ls https://raw.githubusercontent.com/tinydev128/sub-modifier/main/install.sh | sudo bash
 ```
 در طول مراحل نصب اولیه، اسکریپت توکن شما را دریافت و ذخیره می‌کند تا در آینده بتوانید آپدیت‌ها را مستقیماً از طریق منوی خود برنامه و بدون نیاز به وارد کردن مجدد توکن دریافت کنید.
 
