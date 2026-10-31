@@ -5,16 +5,16 @@ CONFIG_FILE="${CONFIG_DIR}/config.env"
 REPO_NAME="tinydev128/sub-modifier"
 
 SUB_BASE_URL="https://127.0.0.1:2020"
-KEYWORDS="CFCDN,CFXCDN,CDN Best"
+KEYWORDS="Premium,VIP,Special"
 SPOOF_IP="104.19.230.21"
 CERT_PATH="/root/cert/ip/fullchain.pem"
 KEY_PATH="/root/cert/ip/privkey.pem"
-MASTER_PORT="8000"
-PORT1="5000"
-PORT2="5800"
-PORT3="5801"
-PORT4="5802"
-PORT5="5803"
+MASTER_PORT="8080"
+PORT1="8081"
+PORT2="8082"
+PORT3="8083"
+PORT4="8084"
+PORT5="8085"
 WORKERS="1"
 FM_VERSION="new"
 APP_SUB_PATH="sub"
@@ -43,7 +43,7 @@ function show_recommendations() {
     echo -e "   \e[90m↳ Auto-routes PattN / PattNG -> Base64 + Standard FM\e[0m"
     echo -e "   \e[90m↳ Auto-routes Flclash / Clash -> YAML + Mihomo Fragment \e[33m[Experimental / Beta]\e[90m\e[0m"
     echo -e "   \e[90m↳ Auto-routes v2rayN, Happ, V2box, NPV, Incy & ALL OTHERS -> JSON + Hybrid FM\e[0m"
-    echo -e "   \e[90m↳ Serves a Minimalist 1-Click App Installer with Live Announcement.\e[0m"
+    echo -e "   \e[90m↳ Serves a Minimalist 1-Click App Installer with Live Announcement & Usage Chart.\e[0m"
     
     echo -e "\n\e[33m💡 LEGACY PORTS SUPPORT:\e[0m"
     echo -e "   Ports \e[33m${PORT1}, ${PORT2}, ${PORT3}, ${PORT4}, ${PORT5}\e[0m are natively bound to the Smart Router."
@@ -92,7 +92,7 @@ function deploy_services() {
         FINALMASK_TCP_HYBRID='[{"type": "fragment", "settings": {"packets": "tlshello", "lengths": ["0", "104", "1"], "delays": ["0"], "maxSplit": "0", "length": "100-200", "interval": "10-20"}}, {"type": "fragment", "settings": {"packets": "1-1", "lengths": ["114", "1"], "delays": ["1"], "maxSplit": "11", "length": "10-20", "interval": "10-20"}}]'
     fi
 
-# ================== UNIFIED MASTER APP (Minimalist 1-Click Installer) ==================
+# ================== UNIFIED MASTER APP ==================
     cat << EOF > /opt/sub_server/app_master.py
 from flask import Flask, request, Response, make_response, jsonify
 import requests
@@ -192,7 +192,6 @@ def smart_router(path):
         'okhttp', 'dart', 'go-http-client', 'cfnetwork'
     ])
 
-    # 1. Dashboard Check (Only serve to real web browsers)
     is_browser = False
     if 'text/html' in accept_header and not is_vpn_client:
         is_browser = True
@@ -209,17 +208,12 @@ def smart_router(path):
         encoded_url = urllib.parse.quote(current_url, safe='')
         b64_url = base64.b64encode((current_url + "?flag=shadowrocket").encode('utf-8')).decode('utf-8')
         
-        try:
-            panel_port = SUB_BASE_URL.split(':')[-1].split('/')[0]
-            if not panel_port.isdigit(): panel_port = "2020"
-        except: panel_port = "2020"
-        
-        panel_scheme = "https" if "https" in SUB_BASE_URL else "http"
-        panel_url = panel_scheme + "://" + host.split(':')[0] + ":" + panel_port + "/"
-        
         # Super-Fast Dynamic Info Fetch via single HEAD request!
         sub_title = "CO VPN"
         announce_text = ""
+        total_gb = 0
+        used_gb = 0
+        percent = 0
         
         try:
             r_stats = requests.head(f"{SUB_BASE_URL}/{PANEL_SUB_PATH}/{clean_path}", headers={'User-Agent': 'happ'}, timeout=3, verify=False)
@@ -240,7 +234,38 @@ def smart_router(path):
             elif ann_hdr:
                 announce_text = urllib.parse.unquote(ann_hdr)
                 
+            # Fetch Usage Info
+            userinfo_hdr = r_stats.headers.get('Subscription-Userinfo', '')
+            if userinfo_hdr:
+                info = {}
+                for part in userinfo_hdr.split(';'):
+                    if '=' in part:
+                        k, v = part.strip().split('=')
+                        info[k.strip()] = int(v.strip())
+                
+                used_bytes = info.get('upload', 0) + info.get('download', 0)
+                tot_bytes = info.get('total', 0)
+                
+                used_gb = used_bytes / (1024**3)
+                total_gb = tot_bytes / (1024**3)
+                if tot_bytes > 0:
+                    percent = (used_bytes / tot_bytes) * 100
+                    if percent > 100: percent = 100
         except: pass
+
+        used_str = f"{used_gb:.2f} GB"
+        if total_gb > 0:
+            rem_gb = total_gb - used_gb
+            if rem_gb < 0: rem_gb = 0
+            rem_str = f"{rem_gb:.2f} GB"
+            total_str = f"{total_gb:.2f} GB"
+            percent_val = round(percent)
+            percent_text = f"{percent_val}%"
+        else:
+            rem_str = "نامحدود"
+            total_str = "نامحدود"
+            percent_val = 0
+            percent_text = "∞"
 
         alert_box_html = ""
         if announce_text:
@@ -287,6 +312,19 @@ def smart_router(path):
                 .theme-toggle:hover { background: var(--row-hover); color: var(--accent); }
                 .alert-box { background: #2c1618; border: 1px solid #5b2526; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: rgba(255,255,255,0.85); text-align: right; direction: rtl;}
                 html:not(.dark) .alert-box { background: #e0e7ff; border-color: #c7d2fe; color: #3730a3; }
+                
+                /* Usage Card Styles */
+                .usage-card { display: flex; align-items: center; gap: 20px; background: var(--tile); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; direction: rtl; }
+                .circular-chart { display: block; margin: 0 auto; max-width: 80px; max-height: 80px; flex-shrink: 0; }
+                .circle-bg { fill: none; stroke: var(--border); stroke-width: 3.8; }
+                .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; animation: progress 1s ease-out forwards; stroke: var(--accent); }
+                @keyframes progress { 0% { stroke-dasharray: 0 100; } }
+                .percentage { fill: var(--text); font-family: sans-serif; font-size: 8px; text-anchor: middle; font-weight: bold; }
+                .usage-stats { flex: 1; }
+                .stat-item { display: flex; justify-content: space-between; gap: 15px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+                .stat-item:last-child { margin-bottom: 0; }
+                .stat-item strong { color: var(--text); }
+                
                 .sub-tabs { display: flex; gap: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
                 .tab-btn { background: transparent; color: var(--muted); border: none; font-size: 15px; cursor: pointer; padding: 12px 0; font-weight: 500; position: relative; }
                 .tab-btn.active { color: var(--accent); }
@@ -308,8 +346,6 @@ def smart_router(path):
                 .copy-box { background: var(--accent-bg); border: 1px dashed var(--border); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; }
                 .copy-box span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted); font-family: monospace; }
                 .copy-btn { background: var(--tile); color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
-                .footer-link { display: block; text-align: center; margin-top: 24px; color: var(--muted); text-decoration: none; font-size: 13px; }
-                .footer-link:hover { color: var(--accent); }
             </style>
         </head>
         <body>
@@ -324,6 +360,20 @@ def smart_router(path):
                     </div>
                     
                     __ALERT_BOX__
+                    
+                    <!-- Dynamic Usage Chart -->
+                    <div class="usage-card">
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <path class="circle" stroke-dasharray="__PERCENT_VAL__, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <text x="18" y="20.35" class="percentage">__PERCENT_TEXT__</text>
+                        </svg>
+                        <div class="usage-stats">
+                           <div class="stat-item"><span>حجم کل:</span> <strong dir="ltr">__TOTAL_GB__</strong></div>
+                           <div class="stat-item"><span>مصرف شده:</span> <strong dir="ltr">__USED_GB__</strong></div>
+                           <div class="stat-item"><span>باقی‌مانده:</span> <strong dir="ltr">__REMAINING_GB__</strong></div>
+                        </div>
+                    </div>
                     
                     <div class="sub-tabs">
                         <button class="tab-btn active" onclick="switchTab('android', this)">Android</button>
@@ -406,8 +456,6 @@ def smart_router(path):
                             <button class="copy-btn" onclick="copyText(this)">Copy</button>
                         </div>
                     </div>
-                    
-                    <a href="__PANEL_URL__" class="footer-link">ورود به پنل کاربری اصلی →</a>
                 </div>
             </div>
     
@@ -453,10 +501,15 @@ def smart_router(path):
         
         html_landing = html_landing.replace("__SUB_TITLE__", sub_title)
         html_landing = html_landing.replace("__ALERT_BOX__", alert_box_html)
+        html_landing = html_landing.replace("__PERCENT_VAL__", str(percent_val))
+        html_landing = html_landing.replace("__PERCENT_TEXT__", percent_text)
+        html_landing = html_landing.replace("__TOTAL_GB__", total_str)
+        html_landing = html_landing.replace("__USED_GB__", used_str)
+        html_landing = html_landing.replace("__REMAINING_GB__", rem_str)
+        
         html_landing = html_landing.replace("__CURRENT_URL__", current_url)
         html_landing = html_landing.replace("__ENCODED_URL__", encoded_url)
         html_landing = html_landing.replace("__B64_URL__", b64_url)
-        html_landing = html_landing.replace("__PANEL_URL__", panel_url)
         
         html_landing = html_landing.replace("__IMG_V2BOX__", IMG_V2BOX)
         html_landing = html_landing.replace("__IMG_INCY__", IMG_INCY)
